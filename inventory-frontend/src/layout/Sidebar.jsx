@@ -5,46 +5,41 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppContext } from '../context/AppContext';
 import { useDropzone } from 'react-dropzone';
-import * as XLSX from 'xlsx';
+import { InventoryApi } from '../services/inventoryApi';
 
 const Sidebar = () => {
-  const { theme, toggleTheme, recentFiles, setRecentFiles, loadFile, createBlank, userProfile, updateProfile, clearAllData, saveFile, currentFileName, setCurrentFileName } = useContext(AppContext);
-  const [modalType, setModalType] = useState(null); // 'upload', 'profile', 'settings'
-  
-  // Track which recent file is being renamed, and what its new name is
+const {
+  theme,
+  toggleTheme,
+  recentFiles,
+  loadFile,
+  createBlank,
+  userProfile,
+  updateProfile,
+  saveFile,
+  currentFileName,
+  renameFile,
+  deleteFile,
+  clearAllData
+} = useContext(AppContext);  const [modalType, setModalType] = useState(null); 
   const [editingFile, setEditingFile] = useState(null);
   const [renameValue, setRenameValue] = useState('');
-
+  
   const [settingsPrefs, setSettingsPrefs] = useState({
-    defaultRows: 20,
-    enableAutoSave: true,
-    excelNavigation: true
+    defaultRows: 20, enableAutoSave: true, excelNavigation: true
   });
 
-  const handleUpload = (acceptedFiles) => {
+  // Uses FastAPI to upload instead of frontend parsing
+  const handleUpload = async (acceptedFiles) => {
     if (!acceptedFiles || acceptedFiles.length === 0) return;
-    
-    const file = acceptedFiles[0];
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        const workbook = XLSX.read(e.target.result, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-        
-        if (json.length > 0) {
-          saveFile(file.name, json, Object.keys(json[0]));
-        } else {
-          saveFile(file.name, [{}], ["Column 1"]);
-        }
-        setModalType(null);
-      } catch (error) {
-        console.error("Error parsing Excel file:", error);
-        alert("Failed to parse Excel file.");
-      }
-    };
-    reader.readAsArrayBuffer(file);
+    try {
+      const res = await InventoryApi.uploadFile(acceptedFiles[0]);
+      saveFile(res.filename, res.data, res.columns);
+      setModalType(null);
+    } catch (error) {
+      console.error("Backend Upload Failed", error);
+      alert("Failed to upload file to server.");
+    }
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
@@ -57,40 +52,31 @@ const Sidebar = () => {
     multiple: false
   });
 
-  // Start the rename process
   const startRename = (e, file) => {
-    e.stopPropagation(); // Prevents loading the file when clicking the button
+    e.stopPropagation();
     setEditingFile(file);
-    setRenameValue(file);
+    setRenameValue(file.replace(/\.[^/.]+$/, "")); // Strip extension for cleaner editing
   };
 
-  // Save the renamed file across recent items array and current tab context
-  const confirmRename = (e, oldName) => {
+  const confirmRename = async (e, oldName) => {
     e.stopPropagation();
-    if (!renameValue.trim() || oldName === renameValue) {
-      setEditingFile(null);
-      return;
-    }
-
-    const updatedRecents = recentFiles.map(file => file === oldName ? renameValue : file);
-    if (setRecentFiles) setRecentFiles(updatedRecents);
+    // Ensure the new name retains an Excel extension
+    const finalNewName = renameValue.trim().endsWith('.xlsx') ? renameValue.trim() : `${renameValue.trim()}.xlsx`;
     
-    if (currentFileName === oldName && setCurrentFileName) {
-      setCurrentFileName(renameValue);
+    if (finalNewName && oldName !== finalNewName) {
+      await renameFile(oldName, finalNewName);
     }
     setEditingFile(null);
   };
 
-  // Remove file safely from list tracking index
-  const deleteFile = (e, fileToRemove) => {
+  const handleDeleteFile = async (e, fileToRemove) => {
     e.stopPropagation();
-    if (window.confirm(`Are you sure you want to remove "${fileToRemove}" from recents?`)) {
-      const updatedRecents = recentFiles.filter(file => file !== fileToRemove);
-      if (setRecentFiles) setRecentFiles(updatedRecents);
+    if (window.confirm(`Are you sure you want to permanently delete "${fileToRemove}" from the server?`)) {
+      await deleteFile(fileToRemove);
     }
   };
 
-  return (
+return (
     <>
       <SidebarContainer>
         <SidebarHeader>
@@ -127,7 +113,7 @@ const Sidebar = () => {
                       <ActionIconButton onClick={(e) => startRename(e, file)}>
                         <FiEdit2 size={12} />
                       </ActionIconButton>
-                      <ActionIconButton onClick={(e) => deleteFile(e, file)} className="danger">
+                      <ActionIconButton onClick={(e) => handleDeleteFile(e, file)} className="danger">
                         <FiTrash2 size={12} />
                       </ActionIconButton>
                     </ItemActions>
@@ -141,7 +127,6 @@ const Sidebar = () => {
             <FiUploadCloud /> Upload / Create
           </UploadBtn>
         </NavMenu>
-
         <SidebarFooter>
           <UserInfo>
             <div className="name">{userProfile.name}</div>

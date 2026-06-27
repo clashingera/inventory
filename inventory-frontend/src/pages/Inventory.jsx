@@ -4,17 +4,17 @@ import { motion } from 'framer-motion';
 import { FiDownload, FiSave } from 'react-icons/fi';
 import { AppContext } from '../context/AppContext';
 import * as XLSX from 'xlsx';
+import { InventoryApi } from '../services/inventoryApi';
 
 const Inventory = () => {
   const { inventoryData, setInventoryData, columns, setColumns, currentFileName, saveFile } = useContext(AppContext);
   const [activeCell, setActiveCell] = useState({ rowIndex: 0, colIndex: 0 });
 
   const handleDownload = () => {
-    const ws = XLSX.utils.json_to_sheet(inventoryData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, currentFileName);
-  };
+  // Use the backend generated file instead of client-side xlsx
+  const url = InventoryApi.getDownloadUrl(currentFileName);
+  window.open(url, '_blank');
+};
 
   const appendBlankRow = (currentData) => {
     const skeleton = {};
@@ -197,8 +197,16 @@ const GridContainer = styled.div`
 const TableGrid = styled.table`
   border-collapse: collapse; 
   font-size: 14px;
-  table-layout: fixed; /* Crucial for keeping columns locked at exact width values */
-  width: max-content;   /* Forces width calculation to scale past wrapper container edges */
+  table-layout: fixed; 
+  width: max-content;
+
+  /* Zebra Striping for alternating row colors */
+  tbody tr:nth-child(even) td {
+    background-color: var(--bg-hover);
+  }
+  tbody tr:nth-child(odd) td {
+    background-color: var(--bg-surface);
+  }
 
   th { 
     background: var(--bg-app); 
@@ -211,15 +219,22 @@ const TableGrid = styled.table`
     position: sticky; 
     top: 0;
     z-index: 5;
-    width: 160px; /* Gives each column standard initial spacing width */
+    width: 160px; 
   }
 
   td { 
     padding: 0; 
     border-right: 1px solid var(--border-color); 
     border-bottom: 1px solid var(--border-color);
-    width: 160px; /* Keeps cells proportional with matching headers */
-    &.selected { outline: 2px solid var(--accent); z-index: 2; }
+    width: 160px; 
+    transition: background-color 0.1s;
+    
+    /* Active cell highlight overwrites alternating color */
+    &.selected { 
+      background-color: var(--bg-app) !important;
+      outline: 2px solid var(--accent); 
+      z-index: 2; 
+    }
   }
 
   input { 
@@ -239,6 +254,10 @@ const TableGrid = styled.table`
     border: none; 
     text-align: left; 
     cursor: text;
-    &:focus { background: var(--bg-surface); outline: 1px solid var(--accent); border-radius: 4px; }
+    &:focus { 
+      background: var(--bg-surface); 
+      outline: 1px solid var(--accent); 
+      border-radius: 4px; 
+    }
   }
 `;

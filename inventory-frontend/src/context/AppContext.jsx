@@ -1,74 +1,157 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect } from "react";
+import { InventoryApi } from "../services/inventoryApi";
 
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'light');
+  const [theme, setTheme] = useState(
+    localStorage.getItem("app_theme") || "light",
+  );
   const [inventoryData, setInventoryData] = useState([]);
   const [columns, setColumns] = useState([]);
   const [currentFileName, setCurrentFileName] = useState("Untitled");
-  const [recentFiles, setRecentFiles] = useState(JSON.parse(localStorage.getItem('recent_files')) || []);
-  const [userProfile, setUserProfile] = useState(JSON.parse(localStorage.getItem('user_profile')) || {
-    name: 'Admin User',
-    email: 'admin@stockflow.com',
-    phone: '+1 234 567 8900'
-  });
+  const [recentFiles, setRecentFiles] = useState([]);
+  const [userProfile, setUserProfile] = useState(
+    JSON.parse(localStorage.getItem("user_profile")) || {
+      name: "Admin User",
+      email: "admin@stockflow.com",
+      phone: "+1 234 567 8900",
+    },
+  );
 
+  // Apply Theme
   useEffect(() => {
-    document.body.className = theme === 'dark' ? 'dark-theme' : 'light-theme';
-    localStorage.setItem('app_theme', theme);
+    document.body.className = theme === "dark" ? "dark-theme" : "light-theme";
+    localStorage.setItem("app_theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
+  // Initial Data Fetch (Get Recent Files on Load)
+  useEffect(() => {
+    InventoryApi.getRecentFiles()
+      .then((files) => setRecentFiles(files || []))
+      .catch((err) => console.error("Failed to load recents", err));
+  }, []);
 
-  const saveFile = (fileName, data, cols) => {
-    setCurrentFileName(fileName);
-    setInventoryData(data);
-    setColumns(cols);
-    localStorage.setItem(`excel_file_${fileName}`, JSON.stringify({ data, cols }));
-    
-    let updatedRecents = [fileName, ...recentFiles.filter(f => f !== fileName)].slice(0, 5);
-    setRecentFiles(updatedRecents);
-    localStorage.setItem('recent_files', JSON.stringify(updatedRecents));
-  };
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
 
-  const loadFile = (fileName) => {
-    const file = JSON.parse(localStorage.getItem(`excel_file_${fileName}`));
-    if (file) {
-      setInventoryData(file.data);
-      setColumns(file.cols);
+  const loadFile = async (fileName) => {
+    try {
+      const res = await InventoryApi.getFileData(fileName);
+      setInventoryData(res.data);
+      setColumns(res.columns);
       setCurrentFileName(fileName);
+    } catch (e) {
+      console.error("Error loading file", e);
     }
   };
 
-  const createBlank = () => {
-    const defaultCols = ['ID', 'Product Name', 'Category', 'Quantity', 'Price', 'Supplier', 'Status'];
-    const defaultData = Array.from({ length: 20 }, () => ({}));
-    saveFile('New_Inventory.xlsx', defaultData, defaultCols);
+  const saveFile = async (fileName, data, cols) => {
+    try {
+      await InventoryApi.saveFile(fileName, cols, data);
+      setCurrentFileName(fileName);
+      setInventoryData(data);
+      setColumns(cols);
+      // Refresh sidebar list
+      const files = await InventoryApi.getRecentFiles();
+      setRecentFiles(files);
+    } catch (e) {
+      console.error("Error saving file", e);
+    }
+  };
+
+  const createBlank = async (rows = 20, cols = 7) => {
+    try {
+      const res = await InventoryApi.createBlank("New_Inventory.xlsx");
+      setInventoryData(res.data);
+      setColumns(res.columns);
+      setCurrentFileName(res.filename);
+      const files = await InventoryApi.getRecentFiles();
+      setRecentFiles(files);
+    } catch (e) {
+      console.error("Error creating blank", e);
+    }
+  };
+
+  const renameFile = async (oldName, newName) => {
+    try {
+      // Fetch old data, save as new file, delete old file
+      const res = await InventoryApi.getFileData(oldName);
+      await InventoryApi.saveFile(newName, res.columns, res.data);
+      await InventoryApi.deleteFile(oldName);
+
+      const files = await InventoryApi.getRecentFiles();
+      setRecentFiles(files);
+      if (currentFileName === oldName) setCurrentFileName(newName);
+    } catch (e) {
+      console.error("Error renaming", e);
+    }
+  };
+
+  const deleteFile = async (fileName) => {
+    try {
+      await InventoryApi.deleteFile(fileName);
+      const files = await InventoryApi.getRecentFiles();
+      setRecentFiles(files);
+
+      // If deleting the currently open file, clear the workspace
+      if (currentFileName === fileName) {
+        setInventoryData([]);
+        setColumns([]);
+        setCurrentFileName("Untitled");
+      }
+    } catch (e) {
+      console.error("Error deleting", e);
+    }
   };
 
   const updateProfile = (newProfile) => {
     setUserProfile(newProfile);
-    localStorage.setItem('user_profile', JSON.stringify(newProfile));
+    localStorage.setItem("user_profile", JSON.stringify(newProfile));
   };
 
-  const clearAllData = () => {
-    localStorage.clear();
-    setInventoryData([]);
-    setColumns([]);
-    setRecentFiles([]);
-    setCurrentFileName("Untitled");
+  const clearAllData = async () => {
+    try {
+      // Delete all files from the server
+      for (const file of recentFiles) {
+        await InventoryApi.deleteFile(file);
+      }
+
+      // Clear state
+      setRecentFiles([]);
+      setInventoryData([]);
+      setColumns([]);
+      setCurrentFileName("Untitled");
+
+      // Clear local profile if desired
+      localStorage.removeItem("user_profile");
+      // Or use localStorage.clear() if you want to remove everything
+    } catch (e) {
+      console.error("Error clearing data", e);
+    }
   };
 
   return (
-    <AppContext.Provider value={{
-      theme, toggleTheme,
-      inventoryData, setInventoryData,
-      columns, setColumns,
-      currentFileName, setCurrentFileName,
-      recentFiles, saveFile, loadFile, createBlank,
-      userProfile, updateProfile, clearAllData
-    }}>
+    <AppContext.Provider
+      value={{
+        theme,
+        toggleTheme,
+        inventoryData,
+        setInventoryData,
+        columns,
+        setColumns,
+        currentFileName,
+        setCurrentFileName,
+        recentFiles,
+        saveFile,
+        loadFile,
+        createBlank,
+        renameFile,
+        deleteFile,
+        clearAllData,   // <-- add this
+        userProfile,
+        updateProfile
+      }}
+    >
       {children}
     </AppContext.Provider>
   );
