@@ -96,8 +96,8 @@ const Inventory = () => {
   if (inventoryData.length === 0) {
     return (
       <EmptyState initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h2>Welcome to StockFlow</h2>
-        <p>Your workspace is empty. Open the sidebar to upload a file or create a blank canvas.</p>
+        <h2>Welcome to Inventory Management</h2>
+        <p>Upload your inventory data or create a new workspace to start tracking products, monitoring stock levels, and streamlining your business operations..</p>
       </EmptyState>
     );
   }

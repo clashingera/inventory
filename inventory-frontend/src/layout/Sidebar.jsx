@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiBox, FiPieChart, FiUploadCloud, FiClock, FiSun, FiMoon, FiSettings, FiUser, FiX, FiEdit2, FiTrash2, FiCheck } from 'react-icons/fi';
+import { FiBox, FiPieChart, FiUploadCloud, FiClock, FiSun, FiMoon, FiSettings, FiUser, FiX, FiEdit2, FiTrash2, FiCheck, FiMenu, FiChevronLeft } from 'react-icons/fi';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AppContext } from '../context/AppContext';
@@ -8,6 +8,7 @@ import { useDropzone } from 'react-dropzone';
 import { InventoryApi } from '../services/inventoryApi';
 
 const Sidebar = () => {
+<<<<<<< HEAD
 const {
   theme,
   toggleTheme,
@@ -22,6 +23,13 @@ const {
   deleteFile,
   clearAllData
 } = useContext(AppContext);  const [modalType, setModalType] = useState(null); 
+=======
+  const { theme, toggleTheme, recentFiles, setRecentFiles, loadFile, createBlank, userProfile, updateProfile, clearAllData, saveFile, currentFileName, setCurrentFileName } = useContext(AppContext);
+  const [modalType, setModalType] = useState(null); // 'upload', 'profile', 'settings'
+  const [isCollapsed, setIsCollapsed] = useState(false); // Sidebar collapse state
+  
+  // Track which recent file is being renamed, and what its new name is
+>>>>>>> f2ebe99 (refactor: update favicon and improve sidebar functionality with collapsible feature)
   const [editingFile, setEditingFile] = useState(null);
   const [renameValue, setRenameValue] = useState('');
   
@@ -58,7 +66,11 @@ const {
     setRenameValue(file.replace(/\.[^/.]+$/, "")); // Strip extension for cleaner editing
   };
 
+<<<<<<< HEAD
   const confirmRename = async (e, oldName) => {
+=======
+  const confirmRename = (e, oldName) => {
+>>>>>>> f2ebe99 (refactor: update favicon and improve sidebar functionality with collapsible feature)
     e.stopPropagation();
     // Ensure the new name retains an Excel extension
     const finalNewName = renameValue.trim().endsWith('.xlsx') ? renameValue.trim() : `${renameValue.trim()}.xlsx`;
@@ -69,7 +81,11 @@ const {
     setEditingFile(null);
   };
 
+<<<<<<< HEAD
   const handleDeleteFile = async (e, fileToRemove) => {
+=======
+  const deleteFile = (e, fileToRemove) => {
+>>>>>>> f2ebe99 (refactor: update favicon and improve sidebar functionality with collapsible feature)
     e.stopPropagation();
     if (window.confirm(`Are you sure you want to permanently delete "${fileToRemove}" from the server?`)) {
       await deleteFile(fileToRemove);
@@ -78,22 +94,45 @@ const {
 
 return (
     <>
-      <SidebarContainer>
+      <SidebarContainer 
+        animate={{ width: isCollapsed ? '78px' : '280px' }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
+      >
         <SidebarHeader>
-          <Logo>StockFlow</Logo>
-          <IconButton onClick={toggleTheme}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</IconButton>
+          {!isCollapsed && <Logo initial={{ opacity: 0 }} animate={{ opacity: 1 }}>Inventory</Logo>}
+          <div style={{ display: 'flex', gap: '4px', margin: isCollapsed ? '0 auto' : '0' }}>
+            {!isCollapsed && <IconButton onClick={toggleTheme}>{theme === 'dark' ? <FiSun /> : <FiMoon />}</IconButton>}
+            <IconButton onClick={() => setIsCollapsed(!isCollapsed)}>
+              {isCollapsed ? <FiMenu /> : <FiChevronLeft />}
+            </IconButton>
+          </div>
         </SidebarHeader>
 
         <NavMenu>
-          <NavItem to="/" end><FiBox /> Inventory</NavItem>
-          <NavItem to="/analysis"><FiPieChart /> Analysis</NavItem>
+          <NavItem to="/" end title="Inventory">
+            <FiBox size={18} /> 
+            {!isCollapsed && <span>Inventory</span>}
+          </NavItem>
+          <NavItem to="/analysis" title="Analysis">
+            <FiPieChart size={18} /> 
+            {!isCollapsed && <span>Analysis</span>}
+          </NavItem>
           
-          <SectionTitle><FiClock /> Recent Files</SectionTitle>
+          {/* UPLOAD BUTTON: Repositioned above recent files */}
+          <UploadBtn onClick={() => setModalType('upload')} title="Upload / Create" $collapsed={isCollapsed}>
+            <FiUploadCloud size={18} />
+            {!isCollapsed && <span>Upload / Create</span>}
+          </UploadBtn>
+
+          {/* RECENT FILES SECTION */}
+          <SectionTitle>
+            {isCollapsed ? <FiClock size={16} style={{ margin: '0 auto' }} title="Recent Files" /> : <><FiClock /> Recent Files</>}
+          </SectionTitle>
           
           <RecentListContainer>
             {recentFiles.map(file => (
-              <RecentItemRow key={file} onClick={() => loadFile(file)}>
-                {editingFile === file ? (
+              <RecentItemRow key={file} onClick={() => loadFile(file)} title={file}>
+                {editingFile === file && !isCollapsed ? (
                   <RenameInputWrapper>
                     <input 
                       type="text" 
@@ -108,6 +147,7 @@ return (
                   </RenameInputWrapper>
                 ) : (
                   <>
+<<<<<<< HEAD
                     <span className="file-name">{file}</span>
                     <ItemActions className="actions-trigger">
                       <ActionIconButton onClick={(e) => startRename(e, file)}>
@@ -117,16 +157,26 @@ return (
                         <FiTrash2 size={12} />
                       </ActionIconButton>
                     </ItemActions>
+=======
+                    <span className="file-name">{isCollapsed ? file.charAt(0).toUpperCase() : file}</span>
+                    {!isCollapsed && (
+                      <ItemActions className="actions-trigger">
+                        <ActionIconButton onClick={(e) => startRename(e, file)}>
+                          <FiEdit2 size={12} />
+                        </ActionIconButton>
+                        <ActionIconButton onClick={(e) => deleteFile(e, file)} className="danger">
+                          <FiTrash2 size={12} />
+                        </ActionIconButton>
+                      </ItemActions>
+                    )}
+>>>>>>> f2ebe99 (refactor: update favicon and improve sidebar functionality with collapsible feature)
                   </>
                 )}
               </RecentItemRow>
             ))}
           </RecentListContainer>
-
-          <UploadBtn onClick={() => setModalType('upload')}>
-            <FiUploadCloud /> Upload / Create
-          </UploadBtn>
         </NavMenu>
+<<<<<<< HEAD
         <SidebarFooter>
           <UserInfo>
             <div className="name">{userProfile.name}</div>
@@ -134,6 +184,22 @@ return (
           </UserInfo>
           <IconButton onClick={() => setModalType('profile')}><FiUser /></IconButton>
           <IconButton onClick={() => setModalType('settings')}><FiSettings /></IconButton>
+=======
+
+        <SidebarFooter $collapsed={isCollapsed}>
+          {!isCollapsed ? (
+            <>
+              <UserInfo>
+                <div className="name">{userProfile.name}</div>
+                <div className="role">Admin</div>
+              </UserInfo>
+              <IconButton onClick={() => setModalType('profile')} title="Profile"><FiUser /></IconButton>
+              <IconButton onClick={() => setModalType('settings')} title="Settings"><FiSettings /></IconButton>
+            </>
+          ) : (
+            <IconButton onClick={() => setModalType('settings')} style={{ margin: '0 auto' }} title="Settings"><FiSettings size={18} /></IconButton>
+          )}
+>>>>>>> f2ebe99 (refactor: update favicon and improve sidebar functionality with collapsible feature)
         </SidebarFooter>
       </SidebarContainer>
 
@@ -202,7 +268,6 @@ return (
                   </SettingRow>
 
                   <Divider>DANGER ZONE</Divider>
-                  
                   <DangerButton onClick={() => { clearAllData(); setModalType(null); }}>Clear All Data & Recents</DangerButton>
                 </div>
               )}
@@ -217,67 +282,61 @@ return (
 export default Sidebar;
 
 // --- CSS (Styled Components) ---
-const SidebarContainer = styled.aside`
-  width: 280px; height: 100vh; background: var(--bg-surface);
+const SidebarContainer = styled(motion.aside)`
+  height: 100vh; background: var(--bg-surface);
   border-right: 1px solid var(--border-color); display: flex; flex-direction: column;
+  overflow: hidden;
 `;
 const SidebarHeader = styled.div`
   height: 70px; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px; border-bottom: 1px solid var(--border-color);
+  padding: 0 20px; border-bottom: 1px solid var(--border-color);
 `;
-const Logo = styled.h1`font-size: 20px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px;`;
+const Logo = styled(motion.h1)`font-size: 20px; font-weight: 700; color: var(--text-main); letter-spacing: -0.5px; white-space: nowrap;`;
 const IconButton = styled.button`
   background: transparent; border: none; color: var(--text-muted); padding: 8px; border-radius: 6px;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   &:hover { background: var(--bg-hover); color: var(--text-main); }
 `;
-const NavMenu = styled.nav`flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;`;
+const NavMenu = styled.nav`flex: 1; padding: 20px 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;`;
 const NavItem = styled(NavLink)`
-  display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px;
-  color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 15px;
+  display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px;
+  color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 15px; white-space: nowrap;
   &.active { background: var(--accent); color: white; }
   &:hover:not(.active) { background: var(--bg-hover); color: var(--text-main); }
+  justify-content: ${props => props.title === "Inventory" || props.title === "Analysis" ? "initial" : "center"};
+  span { transition: opacity 0.2s; }
 `;
 const SectionTitle = styled.div`
-  display: flex; align-items: center; gap: 8px; font-size: 12px; text-transform: uppercase;
-  color: var(--text-muted); font-weight: 600; margin-top: 24px; margin-bottom: 8px; padding-left: 8px;
+  display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 600; margin-top: 16px; margin-bottom: 4px; padding-left: 8px;
+  min-height: 16px;
 `;
-
-// Recent items structure layout updates
 const RecentListContainer = styled.div`
-  display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow-y: auto;
 `;
-
 const RecentItemRow = styled.div`
   display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; 
   font-size: 13px; color: var(--text-main); cursor: pointer; border-radius: 6px; position: relative;
-  
+  min-height: 34px;
   &:hover { 
     background: var(--bg-hover); 
     .actions-trigger { opacity: 1; display: flex; }
   }
-
   .file-name {
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;
+    margin: 0 auto; text-align: center;
   }
 `;
-
 const ItemActions = styled.div`
-  display: none; gap: 6px; opacity: 0; transition: opacity 0.15s ease-in-out;
+  display: none; gap: 4px; opacity: 0; transition: opacity 0.15s ease-in-out;
 `;
-
 const ActionIconButton = styled.button`
   background: transparent; border: none; color: var(--text-muted); padding: 4px; border-radius: 4px;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
-  
-  &:hover { 
-    background: var(--bg-surface); 
-    color: var(--text-main); 
-  }
+  &:hover { background: var(--bg-surface); color: var(--text-main); }
   &.danger:hover { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
   &.success:hover { color: #10b981; background: rgba(16, 185, 129, 0.1); }
 `;
-
 const RenameInputWrapper = styled.div`
   display: flex; align-items: center; gap: 6px; width: 100%;
   input {
@@ -286,19 +345,22 @@ const RenameInputWrapper = styled.div`
     &:focus { border-color: var(--accent); }
   }
 `;
-
 const UploadBtn = styled.button`
-  margin-top: 16px; width: 100%; padding: 12px; background: transparent; border: 1px dashed var(--border-color);
-  color: var(--text-main); border-radius: 8px; font-weight: 500; display: flex; justify-content: center; gap: 8px;
-  cursor: pointer;
+  margin-top: 4px; margin-bottom: 8px; width: 100%; padding: 12px; background: transparent; border: 1px dashed var(--border-color);
+  color: var(--text-main); border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; white-space: nowrap; transition: all 0.2s;
+  justify-content: ${props => props.$collapsed ? "center" : "flex-start"};
+  padding-left: ${props => props.$collapsed ? "12px" : "16px"};
   &:hover { border-color: var(--accent); color: var(--accent); background: rgba(37, 99, 235, 0.05); }
 `;
 const SidebarFooter = styled.div`
-  padding: 20px 24px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px;
+  padding: 20px; border-top: 1px solid var(--border-color); display: flex; align-items: center; 
+  gap: ${props => props.$collapsed ? "0" : "12px"};
+  justify-content: ${props => props.$collapsed ? "center" : "initial"};
 `;
 const UserInfo = styled.div`
-  flex: 1;
-  .name { font-size: 14px; font-weight: 600; color: var(--text-main); }
+  flex: 1; min-width: 0;
+  .name { font-size: 14px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .role { font-size: 12px; color: var(--text-muted); }
 `;
 const ModalOverlay = styled(motion.div)`
@@ -315,7 +377,7 @@ const DropZone = styled.div`
   border: 2px dashed ${props => props.$active ? 'var(--accent)' : 'var(--border-color)'};
   background: ${props => props.$active ? 'rgba(37, 99, 235, 0.05)' : 'var(--bg-app)'};
   border-radius: 12px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s;
-  color: var(--text-muted);
+  color: var(--text-muted); th { width: auto; }
   &:hover { border-color: var(--accent); }
   svg { margin-bottom: 12px; color: var(--accent); }
 `;
